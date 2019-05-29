@@ -4,6 +4,9 @@ import home from '../views/Home.vue'
 import results from '../views/Results.vue'
 import about from '../views/About.vue'
 import allDrugs from '../views/Drugs.vue'
+//import drugInfo from '../views/DrugInfo.vue'
+import drugInfo from '../components/SingleDrug.vue'
+import admin from '../views/Admin.vue'
 
 Vue.use(Router)
 
@@ -27,6 +30,11 @@ export default new Router({
       component: about
     },
     {
+      path: '/edit',
+      name: 'admin',
+      component: admin
+    },
+    {
       path: '/allDrugs',
       name: 'allDrugs',
       component: allDrugs,
@@ -35,6 +43,16 @@ export default new Router({
           fetchAll: true
         }
       }
-    }
+    },{
+      path: '/drugInfo',
+      name: 'drugInfo',
+      component: drugInfo,
+      props: (route) => {
+        return {
+          drug: route.params.drug
+        }
+      }
+    },
+
   ]
 })

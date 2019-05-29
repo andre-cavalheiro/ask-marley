@@ -14,5 +14,5 @@ outputs = {
     'drugNames': 'drugNames.pkl',
     'drugSymptomsPerDrug': 'drugSymptomsPerDrug.pkl',
     'failedURLsName': 'failedURLs.pkl',
-    'successURLsName': 'successURLs.pkl',
+    'crawledDrugs': 'crawledDrugs.pkl',
 }

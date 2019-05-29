@@ -2,8 +2,8 @@ dbName = 'drugDB'
 
 # Several symptom labels can have the same ID
 singleSymptomNameArq = {
-    "label":
-    "ID"
+    "label": "",
+    "ID": int()
 }
 
 # Several drug names can have the same ID
@@ -21,7 +21,7 @@ singleSymptomArq = {
 singleDrugArq = {
         "ID": int(),
         "commonName": "",
-        "description": "",
+        "descriptions": "",
         "otherNames": [],
         "types": [],
         "risks": [],
@@ -29,88 +29,92 @@ singleDrugArq = {
         "linksForMoreInfo": []
     }
 
+titleConverter = {
+    'description': ['what is'],
+}    # 'linksForMoreInfo': ['']
+
 
 # Not being used anywhere, just for human analysis
 collections = ['drugNameToID', 'drugIDToInfo', 'symptomNameToID', 'symptomIDToInfo']
 
 ilitDrugsInitSeed = [
     {
-        "name": "Marijuana",
-        "type": "Cannabinoids",
+        "name": "marijuana",
+        "type": "cannabinoids",
     },
     {
-        "name": "Hashish",
-        "type": "Cannabinoids",
+        "name": "hashish",
+        "type": "cannabinoids",
     },
     {
-        "name": "Heroin",
-        "type": "Opioids",
+        "name": "heroin",
+        "type": "opioids",
     },
     {
-        "name": "Opium",
-        "type": "Opioids",
+        "name": "opium",
+        "type": "opioids",
     },
     {
-        "name": "Cocaine",
-        "type": "Stimulants",
+        "name": "cocaine",
+        "type": "stimulants",
     },
     {
-        "name": "Amphetamine",
-        "type": "Stimulants",
-    },
-
-    {
-        "name": "Methamphetamine",
-        "type": "Stimulants",
-    },
-    {
-        "name": "MDMA",
-        "type": "Club Drugs",
-    },
-    {
-        "name": "Flunitrazepam",
-        "type": "Club Drugs",
-    },
-    {
-        "name": "Ketamine",
-        "type": "Dissociative Drugs",
-    },
-    {
-        "name": "PCP",
-        "type": "Dissociative Drugs",
-    },
-    {
-        "name": "Salvia",
-        "type": "Dissociative Drugs",
-    },
-    {
-        "name": "Dextromethorphan",
-        "type": "Dissociative Drugs",
-    },
-    {
-        "name": "LSD",
-        "type": "Hallucinogens",
+        "name": "amphetamine",
+        "type": "stimulants",
     },
 
     {
-        "name": "Mescaline",
-        "type": "Hallucinogens",
+        "name": "methamphetamine",
+        "type": "stimulants",
     },
     {
-        "name": "Psilocybin",
-        "type": "Hallucinogens",
+        "name": "mdma",
+        "type": "club drugs",
     },
     {
-        "name": "Mescaline",
-        "type": "Hallucinogens",
+        "name": "flunitrazepam",
+        "type": "club drugs",
+    },
+    {
+        "name": "ketamine",
+        "type": "dissociative drugs",
+    },
+    {
+        "name": "pcp",
+        "type": "dissociative drugs",
+    },
+    {
+        "name": "dalvia",
+        "type": "dissociative drugs",
+    },
+    {
+        "name": "dextromethorphan",
+        "type": "dissociative drugs",
+    },
+    {
+        "name": "lsd",
+        "type": "hallucinogens",
+    },
+
+    {
+        "name": "mescaline",
+        "type": "hallucinogens",
+    },
+    {
+        "name": "psilocybin",
+        "type": "hallucinogens",
+    },
+    {
+        "name": "mescaline",
+        "type": "hallucinogens",
     },
     {
         "name": "steroids",
-        "type": "Other Compounds",  # fixme
+        "type": "other compounds",  # fixme
     },
     {
-        "name": "Inhalants",
-        "type": "Other Compounds",  # fixme
+        "name": "inhalants",
+        "type": "other compounds",  # fixme
     }
 ]
 

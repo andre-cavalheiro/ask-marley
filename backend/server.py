@@ -2,6 +2,7 @@ import falcon
 from falcon_cors import CORS
 from processor import DrugProcessor
 from pymongo import MongoClient
+import dbInteractions
 import json
 
 # waitress-serve --port=8000 server:api
@@ -15,7 +16,7 @@ api = falcon.API(middleware=[cors.middleware])
 api.req_options.auto_parse_form_urlencoded=True
 
 class search:
-    def on_post(self, req, resp):
+    def on_post(self,    req, resp):
         print(req.media)
         posted_data = req.media
         searchType = posted_data["searchType"]
@@ -39,20 +40,49 @@ class search:
             payload = processor.processQuery(searchTerm)  # fixme
 
         elif searchType == "checkBox":
-            # fixme - returning every single drug with matched symptom
-            # fixme - remove repeated drugs
             symptoms = posted_data["symptoms"]
-            possibleDrugs = []
+            possibleDrugs = {}
+            print("Matches:")
             for id in symptoms:
-                symptomID = symptomIDToInfo.find_one({"ID": id})
-                for drug in drugIDToInfo.find({"symptomsID": symptomID['ID']}):
+                for drug in drugIDToInfo.find({"symptomsID": id}):
+                    print(drug['ID'])
                     drug.pop('_id')
-                    if drug not in possibleDrugs:
-                        possibleDrugs.append(drug)
-            # print(possibleDrugs)
-            payload = possibleDrugs
-        resp.media = payload
+                    if drug['ID'] not in possibleDrugs.keys():
+                        drug['symptomsMatched'] = 1
+                        possibleDrugs[drug['ID']] = drug
+                    else:
+                        possibleDrugs[drug['ID']]['symptomsMatched'] += 1
 
+            print("Applying treshold")
+            matchedResults = []
+            for id in possibleDrugs.keys():
+                matchedResults.append(possibleDrugs[id]['symptomsMatched'])
+            s = list(sorted(set(matchedResults), reverse=True))
+            idsToDel = []
+            print(s)
+            if len(s)>2:
+                for id in possibleDrugs.keys():
+                    if possibleDrugs[id]['symptomsMatched'] <= s[-2]:
+                        idsToDel.append(id)
+                for id in idsToDel:
+                    del possibleDrugs[id]
+
+            elif len(s)==2:
+                for id in possibleDrugs.keys():
+                    if possibleDrugs[id]['symptomsMatched'] <= s[-1]:
+                        idsToDel.append(id)
+                for id in idsToDel:
+                    del possibleDrugs[id]
+
+            elif len(s)==1:
+                pass
+
+            else:
+                possibleDrugs = {}
+
+            payload = possibleDrugs
+
+        resp.media = payload
 
 class getDrugs:
     def on_post(self, req, resp):
@@ -124,9 +154,38 @@ class getSymptoms:
         print(payload)
         resp.media = payload
 
+class mergeSymptoms:
+    def on_post(self, req, resp):
+        print(req.media)
+        posted_data = req.media
+        oldSymptoms = posted_data['oldSymptomIDs']
+        newCommonName = posted_data['newCommonName']
+        id, n1, n2, n3 = dbInteractions.mergeSymptoms(oldSymptoms, newCommonName)
+        worked = False
+        workedForAll = False
+        print(n2.matched_count)
+        print(n3.matched_count)
+
+        if (n2.matched_count==n2.modified_count) and (n3.matched_count==n3.modified_count) and \
+                (n2.matched_count==1) and (n3.matched_count==1):
+            worked=True
+
+        if n1.matched_count==n1.modified_count:
+            workedForAll = True
+
+        payload = {
+            'id': id,
+            'worked': worked,
+            'workedForAll': workedForAll,
+            'changedDocs1': n1.modified_count,
+
+        }
+        resp.media = payload
+
 processor = DrugProcessor()
 
 client = MongoClient()
+
 db = client["drugDB"]
 
 drugNameToID = db['drugNameToID']
@@ -138,3 +197,4 @@ symptomIDToInfo = db['symptomIDToInfo']
 api.add_route('/search', search())
 api.add_route('/getDrugs', getDrugs())
 api.add_route('/getSymptoms', getSymptoms())
+api.add_route('/mergeSymptoms', mergeSymptoms())

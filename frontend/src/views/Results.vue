@@ -1,7 +1,9 @@
 <template>
   <div class="container">
+    <h3 :id="resultListBegin">Search Results:</h3>
     <div class="result-list" v-if="foundResults" align="left">
       <SingleResult
+              class="boxed"
               v-for="(res, index) in results"
               :key="index"
               :drug="res"
@@ -33,3 +35,15 @@
     },
   }
 </script>
+
+<style>
+    .boxed {
+        border: 1px solid black ;
+        outline:1px solid black;
+        padding-top: 10px;
+        padding-right: 30px;
+        padding-bottom: 25px;
+        padding-left: 80px;
+    }
+
+</style>

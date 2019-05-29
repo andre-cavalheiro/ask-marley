@@ -1,9 +1,12 @@
 <template>
   <div id="app">
+    <h1>🇦​🇸​🇰​ 🇲​🇦​🇷​🇱​🇪​🇾​</h1>
     <div id="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link> |
+      <router-link to="/">Search</router-link> |
       <router-link to="/allDrugs">Show drug info</router-link> |
+      <!--<router-link to="/edit">Edit Symptoms</router-link> |-->
+      <router-link to="/about">About</router-link> |
+
     </div>
     <router-view/>
   </div>

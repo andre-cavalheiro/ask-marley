@@ -57,7 +57,7 @@ def getSymptomIDOrCreate(label):
 
 def getDrugIDOrCreate(commonName, otherNames, type):
     # todo - not considering possible multiple matches because of find_one
-    possibleNames =  [commonName] + otherNames
+    possibleNames = [commonName] + otherNames
 
     for name in possibleNames:
         numResults = drugIDToInfo.count_documents(({"commonName": name}))
@@ -76,21 +76,21 @@ def getDrugIDOrCreate(commonName, otherNames, type):
 
     return insertNewDrug(commonName, type)
 
-def addSymptomsToDrugTypes(type, insertionType, symptoms):
+def addDataToDrugTypes(type, insertionType, positionToFill, data):
     # symptomIDs has to be a list
-    # insertionType = "name", "ID"
-    if insertionType == "ID":
+    # insertionType = "symptomName", "raw"
+    if insertionType == "raw":
         for drug in drugIDToInfo.find({"types": type}):
             drugIDToInfo.update_one(
                 {
                     '_id': drug['_id'],
                 }, {
                     '$set': {
-                        'symptomsID': drug['symptomsID'] + symptoms
+                        positionToFill: drug[positionToFill] + data
                     }
                 }, upsert=False)
-    elif insertionType == "name":
-        symptomIDs = [getSymptomIDOrCreate(s) for s in symptoms]
+    elif insertionType == "symptomName":
+        symptomIDs = [getSymptomIDOrCreate(s) for s in data]
 
         for drug in drugIDToInfo.find({"types": type}):
             drugIDToInfo.update_one(
@@ -102,16 +102,14 @@ def addSymptomsToDrugTypes(type, insertionType, symptoms):
                     }
                 }, upsert=False)
 
-def appendNamesToOtherNames(drugIdentifier, drug, names):
+def appendDataToDataFieldInSingleDrug(drugIdentifier, drug, dataField, data):
     # drugIdentifier "commonName", "ID"
     drugIDToInfo.find_and_modify(
         query={drugIdentifier: drug},
         update={
             '$push':
                 {
-                    "otherNames": {'$each':
-                                       names
-                                   }
+                    dataField: {'$each': data }
                 }
         })
 
@@ -146,8 +144,24 @@ def appendSymptoms(drugIdentifier, drug, symptomsIdentifier, symptoms):
                     }
             })
 
-def mergeSymptoms():
-    pass
+def mergeSymptoms(oldSymptomsIDs, newCommonName):
+    newSymptomID = getNewID()
+    print(newSymptomID)
+    for id in oldSymptomsIDs:
+        # Substitute symptom Ids in drug Info
+        r1 = drugIDToInfo.update_many({"symptomsID": id}, {'$set': {'symptomsID.$': newSymptomID}})
+        # Substitute symptom IDs in name=>ID mapping
+        r2 = symptomNameToID.update_many({"ID": id}, {'$set': {'ID': newSymptomID}})
+        # Substitute symptom ID in ID=> Info mapping
+        r3 = symptomIDToInfo.update_many({"ID": id}, {'$set': {'ID': newSymptomID, 'commonName': newCommonName}})
+
+    """
+    print(r1.modified_count)
+    print(r2.matched_count)
+    print(r3.acknowledged)
+    """
+    return newSymptomID,r1,r2,r3
+
 
 def getNewID():
         n = 10

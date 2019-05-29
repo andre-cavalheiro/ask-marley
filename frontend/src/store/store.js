@@ -8,7 +8,8 @@ Vue.use(Vuex)
 export const state = {
   results: Array,
   drugs: Array,
-  symptoms: Array,
+  symptoms: Array, 
+  transformedSymptoms: Object,
 }
 
 export const mutations = {
@@ -20,6 +21,12 @@ export const mutations = {
     },
     updateSymptoms(state, {newSymptoms}) {
         state.symptoms = newSymptoms
+    },
+    mergeSymptoms(state, {oldSymptoms, newCommonName}){
+        state.transformedSymptoms = {
+            oldSymptoms,
+            newCommonName
+        }
     }
 }
 
@@ -35,7 +42,6 @@ export const actions = {
         return axios.post(baseURL + '/search', params)
             .then((resp) => {
                 commit('updateResults', {newResults: resp.data})
-                // debugger
             })
     },
     fetchDrugs({commit}, {getAllDrugs, drugs, fetchingMethod}) {
@@ -43,14 +49,20 @@ export const actions = {
         return axios.post(baseURL + '/getDrugs',{getAllDrugs, drugs, fetchingMethod})
             .then((resp) => {
                 commit('updateDrugs', {newDrugs: resp.data})
-                // debugger
             })
     },
     fetchSymptoms({commit}, {getAllSymptoms, symptoms, fetchingMethod}) {
         return axios.post(baseURL + '/getSymptoms',{getAllSymptoms, symptoms, fetchingMethod})
             .then((resp) => {
                 commit('updateSymptoms', {newSymptoms: resp.data})
-                // debugger
+            })
+    },
+    mergeSymptoms({commit}, {oldSymptomIDs, newCommonName}) {
+        return axios.post(baseURL + '/mergeSymptoms',{oldSymptomIDs, newCommonName})
+            .then((resp) => {
+                debugger
+                // commit('mergeSymptoms', {oldSymptoms: resp.data.oldSymptoms, newCommonName: resp.data.newCommonName})
+                commit('mergeSymptoms', {oldSymptoms: 1, newCommonName: 2})
             })
     }
 }

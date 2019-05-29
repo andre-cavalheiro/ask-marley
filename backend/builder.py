@@ -6,6 +6,7 @@ from random import randint
 import pickle
 import copy
 from dbInteractions import *
+import json
 
 # File to transform craweled data into a usable state
 # C:\Program Files\MongoDB\Server\4.0\bin
@@ -14,37 +15,48 @@ from dbInteractions import *
 
 class builder:
 
-    def __init__(self, startFromScratch=False):
+    def __init__(self, startFromScratch=False, loadFromFiles=False):
         client = MongoClient()
         self.db = client[dbName]
-        self.drugNameToID = self.db['drugNameToID']
-        self.drugIDToInfo = self.db['drugIDToInfo']
+        """self.collections = {}
+        self.collections['drugNameToID'] = self.db['drugNameToID']
+        self.collections['drugIDToInfo'] = self.db['drugIDToInfo']
+        self.collections['symptomNameToID'] = self.db['symptomNameToID']
+        self.collections['symptomIDToInfo'] = self.db['symptomIDToInfo']
+        """
 
-        self.symptomNameToID = self.db['symptomNameToID']
-        self.symptomIDToInfo = self.db['symptomIDToInfo']
 
         if not startFromScratch:
-            """
-             Verify if database is empty to inform the user (the previous declarations will not influence
-             the following code since mongo only creates the collections once an item is inserted.
-            """
-            emptyCollections = []
-            for c in collections:
-                if c in self.db.list_collection_names():
-                    if self.db[c].count() == 0:
-                        emptyCollections.append(c)
-                else:
-                    emptyCollections.append(c)
 
-            if len(emptyCollections) is 0:
-                print("> WARNING <")
-                print(">> The database did not have the following collections filled")
-                print(emptyCollections)
+            if loadFromFiles:
+                print(">> DROPPING CURRENT DATABASE AND LOADING FROM FILES <<")
+                self.saveDatabase('dbDumpsOld')
+                client.drop_database(dbName)
+                self.loadDatabaseFromFile()
+
+            elif not loadFromFiles:
+                """
+                 Verify if database is empty to inform the user (the previous declarations will not influence
+                 the following code since mongo only creates the collections once an item is inserted.
+                """
+                print(">> USING DATABASE AS IS <<")
+                emptyCollections = []
+                for c in collections:
+                    if c in self.db.list_collection_names():
+                        if self.db[c].count() == 0:
+                            emptyCollections.append(c)
+                    else:
+                        emptyCollections.append(c)
+
+                if len(emptyCollections) is not 0:
+                    print("> WARNING <")
+                    print(">> The database did not have the following collections filled")
+                    print(emptyCollections)
 
         if startFromScratch:
             print(">>> DROPPING DATABASE <<<")
+            self.saveDatabase('dbDumpsOld')
             client.drop_database(dbName)
-
             self.initDB()
 
     def initDB(self):
@@ -85,27 +97,28 @@ class builder:
         for type in types:
             # First insert the symptoms in the symptom name to ID collection:
             if type != 'other compounds':
-                addSymptomsToDrugTypes(type, "name", effectsPerDrug[type]['effects'])
+                addDataToDrugTypes(type, "symptomName", 'symptomsID', effectsPerDrug[type]['effects'])
+                addDataToDrugTypes(type, "raw", 'risks', effectsPerDrug[type]['risks'])
+
                 """
                 for effect in effectsPerDrug[type]['effects']:
                     if effect is not '':
                         id = getSymptomOrCreate(effect)
-                        addSymptomsToDrugTypes(type, )
                         '''
                         s = copy.deepcopy(singleSymptomNameArq)
                         s["label"] = effect.lower()
                         s["ID"] = self.getNewID()
-                        self.symptomNameToID.insert_one(s)
+                        self.collections['symptomNameToID'].insert_one(s)
 
                         s_ = copy.deepcopy(singleSymptomArq)
                         s_["commonName"] = s["label"]
                         s_["ID"] = s["ID"]
-                        self.symptomIDToInfo.insert_one(s_)
+                        self.collections['symptomIDToInfo'].insert_one(s_)
                         '''
 
                         # Then insert the very same ID in the effects associated with the drugs of the given type
-                        for drug in self.drugIDToInfo.find({"types": type}):
-                            self.drugIDToInfo.update_one(
+                        for drug in self.collections['drugIDToInfo'].find({"types": type}):
+                            self.collections['drugIDToInfo'].update_one(
                                 {
                                     '_id': drug['_id'],
                                 }, {
@@ -133,16 +146,15 @@ class builder:
         drugNames = pickle.load(f1)
         effectsPerDrug = pickle.load(f2)
 
-        # todo test me
         for drug in drugNames:
             drugID = getDrugIDOrCreate(drug, effectsPerDrug[drug]['otherNames'], "")     # fixme - having the risk of inserting empty type
-            appendNamesToOtherNames("ID", drugID, effectsPerDrug[drug]['otherNames'])
+            appendDataToDataFieldInSingleDrug("ID", drugID, "otherNames", effectsPerDrug[drug]['otherNames'])
             appendSymptoms("ID", drugID, "names", effectsPerDrug[drug]['symptoms'])
             """
             # Find if drug already exists
             print(drug)
-            numResults = self.drugIDToInfo.count_documents(({"commonName": drug}))
-            numResultsSynonyms = self.drugIDToInfo.count_documents({"otherNames": drug})
+            numResults = self.collections['drugIDToInfo'].count_documents(({"commonName": drug}))
+            numResultsSynonyms = self.collections['drugIDToInfo'].count_documents({"otherNames": drug})
 
             if numResults == 0 and numResultsSynonyms == 0:
                 #Create new drug entry
@@ -151,7 +163,7 @@ class builder:
             elif numResultsSynonyms == 0:
                 # Append other names to existing drug
                 print("Append other names to existing drug (Synonym)")
-                self.drugIDToInfo.find_and_modify(
+                self.collections['drugIDToInfo'].find_and_modify(
                     query={"commonName": drug},
                     update={
                         '$push':
@@ -166,25 +178,25 @@ class builder:
                 for symptom in effectsPerDrug[drug]['symptoms']:
                     symptomID = None
                     # Check if symptom exists if not create it
-                    numSymptomsMatches = self.symptomNameToID.count_documents({"label": symptom})
+                    numSymptomsMatches = self.collections['symptomNameToID'].count_documents({"label": symptom})
                     if numSymptomsMatches == 0:
                         # Create new symptom
                         print("Creating Symptom")
                         s = copy.deepcopy(singleSymptomNameArq)
                         s["label"] = symptom
                         s["ID"] = self.getNewID()
-                        self.symptomNameToID.insert_one(s)
+                        self.collections['symptomNameToID'].insert_one(s)
                         symptomID = s["ID"]
                     else:
                         # Adding existing symptom
                         print("Adding existing symptom")
-                        dbInstance = self.symptomNameToID.find_one({"label": symptom}, {'ID': 1, '_id': 0})
+                        dbInstance = self.collections['symptomNameToID'].find_one({"label": symptom}, {'ID': 1, '_id': 0})
                         symptomID = dbInstance['ID']
                         print(symptomID)
                     symptomIDs.append(symptomID)
                 print(symptomIDs)
                 # Insert symptoms
-                self.drugIDToInfo.find_and_modify(
+                self.collections['drugIDToInfo'].find_and_modify(
                     query={"commonName": drug},
                     update={
                         '$push':
@@ -205,9 +217,43 @@ class builder:
                     pass
             """
 
+    def drugsDotCom(self):
+        print("> [Drugs.Com]")
 
-b = True
-a = builder(startFromScratch=b)
-if b:
+        dir = os.path.join(os.path.join('drugSpider', 'output'), 'DrugsDotCom')
+        f1 = open(os.path.join(dir, outputs['crawledDrugs']), 'rb')
+        drugNames = pickle.load(f1)
+
+        for drugName in drugNames:
+            f1 = open(os.path.join(dir, drugName + '.pkl'), 'rb')
+            drugData = pickle.load(f1)
+            drugID = getDrugIDOrCreate(drugName, [], "")     # fixme - having the risk of inserting empty type
+            for dataField in drugData.keys():
+                appendDataToDataFieldInSingleDrug("ID", drugID, dataField, [drugData[dataField]])
+
+    def saveDatabase(self, dir):
+        for col in collections:
+            self.saveCollection(col, dir)
+
+    def saveCollection(self, collectionName, dir):
+        col = self.db[collectionName]
+
+        cursor = col.find({}, {'_id': False})
+        file = open(os.path.join(dir, collectionName + ".json"), "w")
+        file.write('[')
+        for document in cursor:
+            file.write(json.dumps(document))
+            file.write(',')
+        file.write(']')
+
+    def loadDatabaseFromFile(self):
+        pass
+
+deleteAndReboot = False
+loadFromFile = False
+a = builder(startFromScratch=deleteAndReboot, loadFromFiles=loadFromFile)
+if deleteAndReboot:
     a.centerOnAddiction()
-a.betterHealth()
+    a.betterHealth()
+    a.drugsDotCom()
+a.saveDatabase('dbDumps')
